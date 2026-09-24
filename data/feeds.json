@@ -1,0 +1,23 @@
+[
+  {
+    "url": "https://devremotely.com/feeds/fullstack.xml",
+    "category": "fullstack-remote"
+  },
+  {
+    "url": "https://devremotely.com/feeds/engineer.xml",
+    "category": "engineer-remote"
+  },
+  {
+    "url": "https://devremotely.com/feeds/devops.xml",
+    "category": "devops-remote"
+  },
+  {
+    "url": "https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss",
+    "category": "fullstack-remote"
+  },
+  {
+    "url": "https://remoteok.com/api",
+    "category": "fullstack-remote",
+    "type": "json"
+  }
+]

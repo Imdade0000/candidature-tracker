@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Veille — Assistant de candidatures</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Tonalités base — encre-teal réchauffée */
+    --ink-950: #0B1512;
+    --ink-900: #101E1A;
+    --panel-900: #172720;
+    --panel-800: #1F342B;
+    --panel-700: #2B4237;
+    --line-700: #314940;
+    --line-600: #3F5A4E;
+
+    /* Texte : cascade de contraste */
+    --text-100: #EFF4F0;
+    --text-300: #C9D6CE;
+    --text-400: #9CB2A6;
+    --text-600: #6F877A;
+
+    /* Signaux */
+    --signal-amber: #E8A33D;
+    --signal-amber-bright: #F5BE64;
+    --signal-green: #6FCF97;
+    --signal-rust: #E0704D;
+
+    /* Fondus de signal (pour pastilles/lueurs, sans casser le contraste) */
+    --amber-soft: rgba(232, 163, 61, 0.14);
+    --green-soft: rgba(111, 207, 151, 0.13);
+    --rust-soft: rgba(224, 112, 77, 0.13);
+    --glow-amber: rgba(232, 163, 61, 0.18);
+    --glow-green: rgba(111, 207, 151, 0.12);
+
+    --radius: 12px;
+    --radius-sm: 8px;
+    --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+    --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { min-height: 100%; }
+
+  html, body {
+    margin: 0;
+    background: var(--ink-950);
+    color: var(--text-100);
+    font-family: var(--font-body);
+  }
+
+  body {
+    display: flex;
+    min-height: 100vh;
+    background:
+      radial-gradient(1100px 540px at 92% -10%, var(--glow-amber), transparent 62%),
+      radial-gradient(900px 520px at -12% 6%, var(--glow-green), transparent 58%),
+      var(--ink-950);
+    background-attachment: fixed;
+  }
+
+  /* ---------- Rail latéral ---------- */
+  .rail {
+    width: 236px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+    border-right: 1px solid var(--line-700);
+    border-top: 3px solid var(--signal-amber);
+    padding: 26px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .radar {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid var(--signal-amber);
+    overflow: hidden;
+    flex-shrink: 0;
+    background: radial-gradient(circle, var(--amber-soft), transparent 70%);
+    box-shadow: 0 0 18px -4px var(--glow-amber);
+  }
+
+  .radar::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50%;
+    height: 1.5px;
+    background: linear-gradient(90deg, var(--signal-amber-bright), transparent);
+    transform-origin: left center;
+    animation: sweep 3.2s linear infinite;
+  }
+
+  @keyframes sweep {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .brand-name {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--text-100);
+  }
+
+  .brand-name b { color: var(--signal-amber); font-weight: 700; }
+
+  .status-block {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-400);
+    line-height: 1.8;
+    padding: 10px 12px;
+    border: 1px solid var(--line-700);
+    border-radius: var(--radius-sm);
+    background: var(--panel-800);
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background: var(--text-600);
+  }
+  .status-dot.on { background: var(--signal-green); box-shadow: 0 0 10px -2px var(--signal-green); animation: pulse 2.4s var(--ease) infinite; }
+  .status-dot.off { background: var(--signal-rust); box-shadow: 0 0 10px -2px var(--signal-rust); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+
+  nav { display: flex; flex-direction: column; gap: 3px; margin-top: 2px; }
+
+  .nav-item {
+    text-align: left;
+    background: none;
+    border: none;
+    border-left: 2px solid transparent;
+    color: var(--text-400);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 11px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: color .18s var(--ease), background .18s var(--ease),
+                border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+
+  .nav-item:hover { color: var(--text-100); background: var(--panel-800); }
+
+  .nav-item.active {
+    color: var(--text-100);
+    background: var(--panel-800);
+    border-left: 2px solid var(--signal-amber);
+    box-shadow: inset 0 0 24px -14px var(--glow-amber);
+  }
+
+  .rail-footer {
+    margin-top: auto;
+    font-size: 11px;
+    color: var(--text-600);
+    line-height: 1.7;
+  }
+
+  button {
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: transform .12s var(--ease), box-shadow .2s var(--ease),
+                background .2s var(--ease), color .2s var(--ease),
+                border-color .2s var(--ease), opacity .2s var(--ease);
+  }
+  button:active { transform: translateY(1px); }
+  button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--amber-soft);
+  }
+
+  button.primary {
+    background: linear-gradient(180deg, var(--signal-amber-bright), var(--signal-amber));
+    color: var(--ink-950);
+    border: none;
+    border-radius: 10px;
+    padding: 11px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    box-shadow: 0 10px 22px -14px var(--glow-amber);
+  }
+  button.primary:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 14px 28px -14px var(--glow-amber); }
+  button.primary:active { transform: translateY(0); }
+  button.primary:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+  /* ---------- Zone principale ---------- */
+  main {
+    flex: 1;
+    padding: 44px 52px;
+    max-width: 960px;
+  }
+
+  .view h1 {
+    position: relative;
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px 0;
+    padding-left: 16px;
+  }
+
+  .view h1::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 4px;
+    bottom: 4px;
+    width: 4px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, var(--signal-amber), transparent);
+  }
+
+  .subtitle {
+    color: var(--text-400);
+    font-size: 14.5px;
+    margin: 0 0 32px 16px;
+    max-width: 64ch;
+    line-height: 1.6;
+  }
+
+  .view { display: none; }
+  .view.active {
+    display: block;
+    animation: viewEnter .34s var(--ease);
+  }
+
+  @keyframes viewEnter {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  /* ---------- Interroger ---------- */
+  .terminal {
+    border: 1px solid var(--line-700);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    min-height: 260px;
+    max-height: 440px;
+    overflow-y: auto;
+    padding: 20px 22px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.75;
+  }
+
+  .terminal .empty { color: var(--text-600); }
+
+  .msg-q { color: var(--signal-amber); margin-top: 16px; }
+  .msg-q:first-child { margin-top: 0; }
+  .msg-a { color: var(--text-100); white-space: pre-wrap; margin-top: 6px; animation: riseIn .28s var(--ease); }
+  .msg-sources { color: var(--text-400); font-size: 11px; margin-top: 6px; }
+
+  @keyframes riseIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .ask-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  input[type="text"], textarea {
+    background: var(--ink-900);
+    border: 1px solid var(--line-700);
+    border-radius: 10px;
+    color: var(--text-100);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 12px 14px;
+    transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+  }
+
+  input[type="text"] { flex: 1; }
+  input[type="text"]:focus, textarea:focus {
+    outline: none;
+    border-color: var(--signal-amber);
+    box-shadow: 0 0 0 3px var(--amber-soft);
+  }
+
+  .hint { color: var(--text-600); font-size: 12px; margin-top: 10px; }
+
+  /* ---------- Scorer ---------- */
+  .field-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-400);
+    margin: 20px 0 8px 0;
+  }
+  .field-label:first-of-type { margin-top: 0; }
+
+  textarea { width: 100%; resize: vertical; min-height: 140px; }
+  input[type="text"].full { width: 100%; }
+
+  .score-result {
+    margin-top: 30px;
+    display: none;
+  }
+  .score-result.show {
+    display: block;
+    animation: riseIn .4s var(--ease);
+  }
+
+  .score-head {
+    display: flex;
+    align-items: baseline;
+    gap: 22px;
+    border-bottom: 1px solid var(--line-700);
+    padding-bottom: 20px;
+  }
+
+  .score-number {
+    font-family: var(--font-mono);
+    font-size: clamp(44px, 7vw, 60px);
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-shadow: 0 0 26px var(--glow-green);
+  }
+  .score-number.good { color: var(--signal-green); }
+  .score-number.mid { color: var(--signal-amber); }
+  .score-number.low { color: var(--signal-rust); }
+
+  .score-reco { font-size: 15px; font-weight: 600; color: var(--text-100); }
+  .score-expl { font-size: 13px; color: var(--text-400); margin-top: 4px; line-height: 1.55; }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 4px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--line-600);
+    background: var(--panel-800);
+    color: var(--text-300);
+    animation: tagIn .3s var(--ease) backwards;
+  }
+  .tag:nth-child(2) { animation-delay: .05s; }
+  .tag:nth-child(3) { animation-delay: .1s; }
+  .tag:nth-child(4) { animation-delay: .15s; }
+  .tag:nth-child(5) { animation-delay: .2s; }
+  .tag:nth-child(6) { animation-delay: .25s; }
+  .tag:nth-child(7) { animation-delay: .3s; }
+  .tag:nth-child(8) { animation-delay: .35s; }
+  .tag.matched { color: var(--signal-green); border-color: rgba(111, 207, 151, 0.35); background: var(--green-soft); }
+  .tag.missing { color: var(--signal-rust); border-color: rgba(224, 112, 77, 0.35); background: var(--rust-soft); }
+
+  @keyframes tagIn {
+    from { opacity: 0; transform: translateY(4px) scale(0.96); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .score-section { margin-top: 24px; }
+  .score-section-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-400);
+    margin-bottom: 10px;
+  }
+
+  .flag-list { list-style: none; margin: 0; padding: 0; }
+  .flag-list li {
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 10px 14px;
+    border-left: 3px solid var(--signal-amber);
+    background: linear-gradient(90deg, var(--amber-soft), transparent 85%);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 8px;
+    color: var(--text-300);
+  }
+
+  /* ---------- Journal ---------- */
+  .ledger { border-top: 1px solid var(--line-700); }
+  .ledger-row {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 150px;
+    gap: 20px;
+    align-items: start;
+    padding: 18px 4px;
+    border-bottom: 1px solid var(--line-700);
+    transition: background .2s var(--ease), padding-left .2s var(--ease);
+  }
+  .ledger-row:hover { background: linear-gradient(90deg, rgba(232, 163, 61, 0.05), transparent 60%); padding-left: 10px; }
+  .ledger-company { font-weight: 600; font-size: 15px; color: var(--text-100); }
+  .ledger-title { font-size: 13.5px; color: var(--text-300); margin-top: 3px; line-height: 1.5; }
+  .ledger-meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-600); margin-top: 7px; line-height: 1.6; }
+
+  .mini-btn {
+    background: var(--panel-800);
+    border: 1px solid var(--line-700);
+    color: var(--text-400);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 11px;
+  }
+  .mini-btn:hover { color: var(--text-100); border-color: var(--signal-amber); box-shadow: 0 6px 16px -12px var(--glow-amber); }
+  .mini-btn.danger:hover { color: var(--signal-rust); border-color: var(--signal-rust); box-shadow: 0 6px 16px -12px var(--signal-rust); }
+
+  .ledger-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+
+  .add-form {
+    display: none;
+    animation: riseIn .3s var(--ease);
+  }
+  .add-form.show {
+    display: block;
+    border: 1px solid var(--line-700);
+    border-left: 3px solid var(--signal-amber);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+    margin-bottom: 26px;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+  .form-grid .field-label { margin-top: 16px; }
+  .form-grid .field-label:nth-child(-n+2) { margin-top: 0; }
+  .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+
+  /* ---------- Stats ---------- */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .stat-card {
+    border: 1px solid var(--line-700);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+  }
+  .stat-card .num { font-family: var(--font-mono); font-size: 30px; font-weight: 700; color: var(--text-100); }
+  .stat-card .lbl { font-size: 12.5px; color: var(--text-400); margin-top: 5px; text-transform: capitalize; }
+  .month-table { margin-top: 8px; }
+  .month-row { display: grid; grid-template-columns: repeat(5, 1fr); font-size: 13px; padding: 9px 0; border-bottom: 1px solid var(--line-700); }
+  .month-row.head { color: var(--text-400); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ---------- Alertes ---------- */
+  .badge {
+    display: inline-block;
+    min-width: 20px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 11px;
+    background: var(--signal-amber);
+    color: var(--ink-950);
+    font-weight: 700;
+    text-align: center;
+    margin-left: 8px;
+    box-shadow: 0 0 14px -4px var(--glow-amber);
+  }
+  .alerts-toolbar,
+  .missions-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .alert-list { display: flex; flex-direction: column; gap: 14px; }
+  .alert-card {
+    border: 1px solid var(--line-700);
+    border-left: 4px solid var(--line-600);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+    transition: opacity .2s var(--ease), transform .2s var(--ease), border-color .2s var(--ease);
+  }
+  .alert-card:hover { transform: translateY(-1px); border-color: var(--line-600); }
+  .alert-card.new { border-left-color: var(--signal-amber); }
+  .alert-card.applied { opacity: 0.55; }
+  .alert-card.dropped { opacity: 0.45; }
+  .alert-head { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; flex-wrap: wrap; }
+  .alert-title { font-weight: 600; font-size: 14.5px; line-height: 1.4; }
+  .alert-title a { color: var(--signal-amber); text-decoration: none; }
+  .alert-company { font-size: 12.5px; color: var(--text-400); margin-top: 3px; }
+  .alert-score {
+    font-family: var(--font-mono);
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 8px 12px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: var(--panel-800);
+    border: 1px solid var(--line-700);
+  }
+  .alert-score.good { color: var(--signal-green); background: var(--green-soft); border-color: rgba(111, 207, 151, 0.35); }
+  .alert-score.mid { color: var(--signal-amber); background: var(--amber-soft); border-color: rgba(232, 163, 61, 0.35); }
+  .alert-score.low { color: var(--signal-rust); background: var(--rust-soft); border-color: rgba(224, 112, 77, 0.35); }
+  .alert-reco { font-size: 13.5px; margin-top: 10px; color: var(--text-300); }
+  .alert-meta { font-size: 11px; color: var(--text-600); margin-top: 9px; }
+  .alert-foot { display: flex; gap: 8px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+  .alert-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    margin-left: auto;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+  .alert-status.new { color: var(--signal-amber); background: var(--amber-soft); }
+  .alert-status.seen { color: var(--text-400); background: var(--panel-800); }
+  .alert-status.applied { color: var(--signal-green); background: var(--green-soft); }
+  .alert-status.dropped { color: var(--signal-rust); background: var(--rust-soft); }
+
+  .status-tag {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    text-align: center;
+    white-space: nowrap;
+    justify-self: end;
+  }
+  .status-tag.sent { color: var(--signal-green); background: var(--green-soft); border: 1px solid rgba(111, 207, 151, 0.35); }
+  .status-tag.pending { color: var(--signal-amber); background: var(--amber-soft); border: 1px solid rgba(232, 163, 61, 0.35); }
+  .status-tag.rejected, .status-tag.dropped { color: var(--signal-rust); background: var(--rust-soft); border: 1px solid rgba(224, 112, 77, 0.35); }
+
+  /* ---------- Missions ---------- */
+  .mission-list { border-top: 1px solid var(--line-700); }
+  .mission-row {
+    display: grid;
+    grid-template-columns: 84px 1fr 188px;
+    gap: 20px;
+    align-items: start;
+    padding: 18px 4px;
+    border-bottom: 1px solid var(--line-700);
+    transition: background .2s var(--ease), padding-left .2s var(--ease), opacity .2s var(--ease);
+  }
+  .mission-row:hover { background: linear-gradient(90deg, rgba(232, 163, 61, 0.05), transparent 60%); padding-left: 10px; }
+  .mission-row.is-applied { opacity: 0.5; }
+  .mission-score {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    padding: 12px 8px;
+    border-radius: 12px;
+    text-align: center;
+    width: 100%;
+    background: var(--panel-800);
+    border: 1px solid var(--line-700);
+  }
+  .mission-score.good {
+    color: var(--signal-green);
+    background: var(--green-soft);
+    border-color: rgba(111, 207, 151, 0.4);
+    box-shadow: 0 10px 24px -14px rgba(111, 207, 151, 0.55);
+  }
+  .mission-score.mid {
+    color: var(--signal-amber);
+    background: var(--amber-soft);
+    border-color: rgba(232, 163, 61, 0.4);
+    box-shadow: 0 10px 24px -14px var(--glow-amber);
+  }
+  .mission-score.low {
+    color: var(--signal-rust);
+    background: var(--rust-soft);
+    border-color: rgba(224, 112, 77, 0.4);
+  }
+  .mission-title { font-weight: 600; font-size: 15px; line-height: 1.45; color: var(--text-100); }
+  .mission-company { font-family: var(--font-mono); font-size: 12px; color: var(--text-400); margin-top: 4px; }
+  .mission-meta { font-size: 11px; color: var(--text-600); margin-top: 8px; letter-spacing: 0.01em; }
+  .mission-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .mission-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 11px;
+    border-radius: 999px;
+  }
+  .mission-status.new, .mission-status.to_apply, .mission-status.pending { color: var(--signal-amber); background: var(--amber-soft); }
+  .mission-status.seen { color: var(--text-400); background: var(--panel-800); }
+  .mission-status.applied { color: var(--signal-green); background: var(--green-soft); }
+  .mission-status.dropped, .mission-status.rejected { color: var(--signal-rust); background: var(--rust-soft); }
+
+  .draft-panel {
+    display: none;
+    border: 1px solid var(--line-600);
+    border-left: 4px solid var(--signal-green);
+    border-radius: var(--radius);
+    background: linear-gradient(180deg, var(--panel-900), var(--ink-900));
+    padding: 20px 24px;
+    margin: 20px 0 26px;
+  }
+  .draft-panel.show {
+    display: block;
+    animation: draftIn .4s var(--ease);
+  }
+
+  @keyframes draftIn {
+    from { opacity: 0; transform: translateY(10px) scale(0.99); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .draft-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .draft-subject { font-family: var(--font-mono); font-size: 13.5px; font-weight: 700; color: var(--text-100); }
+  .draft-body { font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; color: var(--text-300); }
+
+  /* ---------- État vide / chargement ---------- */
+  .empty-state {
+    border: 1.5px dashed var(--line-600);
+    border-radius: var(--radius);
+    padding: 56px 24px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--amber-soft), transparent 62%);
+    margin-top: 4px;
+  }
+  .empty-state.err { border-color: var(--signal-rust); border-style: solid; background: var(--rust-soft); }
+  .empty-radar {
+    position: relative;
+    width: 76px;
+    height: 76px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    border: 1.5px dashed var(--line-600);
+    background: radial-gradient(circle, var(--amber-soft), transparent 72%);
+  }
+  .empty-radar::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: 50%;
+    border: 1px solid var(--line-700);
+  }
+  .empty-radar::after {
+    content: "";
+    position: absolute;
+    inset: -12px;
+    border-radius: 50%;
+    border: 1px solid var(--glow-amber);
+    animation: ping 2.8s var(--ease) infinite;
+  }
+  @keyframes ping {
+    0% { transform: scale(0.94); opacity: 0.8; }
+    70%, 100% { transform: scale(1.22); opacity: 0; }
+  }
+  .empty-radar .radar-sweep {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+  .empty-radar .radar-sweep::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 50%;
+    height: 2px;
+    background: linear-gradient(90deg, var(--signal-amber-bright), transparent);
+    transform-origin: left center;
+    animation: sweep 3s linear infinite;
+  }
+  .empty-state h2 { font-size: 17px; font-weight: 600; margin: 0 0 10px 0; color: var(--text-100); }
+  .empty-state p { font-size: 14px; line-height: 1.6; color: var(--text-400); max-width: 46ch; margin: 0 auto; }
+
+  .skeleton { display: flex; flex-direction: column; gap: 12px; padding: 12px 0 4px; }
+  .skeleton .bar {
+    height: 13px;
+    border-radius: 7px;
+    background: linear-gradient(90deg, var(--panel-800) 25%, var(--panel-700) 50%, var(--panel-800) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+  .skeleton .bar.tall { height: 20px; }
+  .skeleton .w100 { width: 100%; }
+  .skeleton .w80 { width: 80%; }
+  .skeleton .w60 { width: 60%; }
+  .skeleton .w40 { width: 40%; }
+
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+
+  .loading {
+    color: var(--text-400);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .loading::before {
+    content: "";
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--line-600);
+    border-top-color: var(--signal-amber);
+    border-radius: 50%;
+    animation: sweep 0.9s linear infinite;
+  }
+
+  /* ---------- Configuration ---------- */
+  .config-panel {
+    flex-direction: column;
+    gap: 8px;
+    margin: -18px 0 14px;
+    padding: 14px;
+    border: 1px solid var(--line-700);
+    border-radius: var(--radius-sm);
+    background: var(--ink-900);
+  }
+  .config-panel input {
+    font-size: 12px;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+  }
+  .config-panel .primary { font-size: 12px; padding: 9px 10px; }
+
+  /* ---------- Toast ---------- */
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translate(-50%, 16px);
+    background: var(--panel-900);
+    border: 1px solid var(--line-600);
+    color: var(--text-100);
+    padding: 11px 18px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s var(--ease), transform .25s var(--ease);
+    z-index: 60;
+    max-width: min(92vw, 420px);
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #toast.ok { border-color: var(--signal-green); box-shadow: 0 16px 40px -14px rgba(111, 207, 151, 0.35); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 960px) {
+    main { padding: 32px 28px; }
+    .rail { width: 210px; }
+  }
+
+  @media (max-width: 720px) {
+    body { flex-direction: column; }
+    .rail {
+      width: 100%;
+      flex-direction: row;
+      align-items: center;
+      padding: 12px 16px;
+      gap: 14px;
+      border-right: none;
+      border-top: 3px solid var(--signal-amber);
+    }
+    .status-block, .rail-footer { display: none; }
+    nav { flex-direction: row; margin-top: 0; overflow-x: auto; scrollbar-width: thin; }
+    .nav-item { white-space: nowrap; padding: 8px 11px; }
+    main { padding: 26px 18px; max-width: none; }
+    .subtitle { margin-left: 0; }
+    .ledger-row { grid-template-columns: 1fr; }
+    .status-tag { justify-self: start; }
+    .mission-row { grid-template-columns: 1fr; }
+    .mission-actions { align-items: flex-start; }
+    .mission-score { width: fit-content; padding: 10px 22px; }
+    .config-panel { margin: 0 0 10px; }
+  }
+
+  @media (max-width: 640px) {
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .alert-head { flex-direction: column; align-items: flex-start; }
+    .month-table { overflow-x: auto; }
+    .month-row { min-width: 460px; }
+  }
+
+  @media (max-width: 480px) {
+    .ask-row { flex-direction: column; }
+    .ask-row .primary { width: 100%; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .draft-panel { padding: 16px; }
+    .draft-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001s !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001s !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <aside class="rail">
+    <div class="brand">
+      <div class="radar"></div>
+      <div class="brand-name"><b>VEILLE</b> // candidatures</div>
+    </div>
+
+    <div class="status-block" id="statusBlock">
+      <div><span class="status-dot" id="statusDot"></span><span id="statusText">connexion…</span></div>
+      <div id="statusCount">—</div>
+    </div>
+
+    <button class="nav-item" id="configToggle" style="border-left:none; color:var(--text-400); font-size:12px;">⚙ Configurer l'API</button>
+    <div id="configPanel" class="config-panel" style="display:none;">
+      <input type="text" id="apiUrlInput" placeholder="URL de l'API (ex: https://ton-api.onrender.com)" />
+      <input type="text" id="apiKeyInput" placeholder="Clé API (si définie côté serveur)" />
+      <button class="primary" id="apiSaveBtn">Enregistrer</button>
+    </div>
+
+    <nav>
+      <button class="nav-item active" data-view="ask">Interroger</button>
+      <button class="nav-item" data-view="missions">Missions</button>
+      <button class="nav-item" data-view="score">Scorer une offre</button>
+      <button class="nav-item" data-view="log">Journal</button>
+      <button class="nav-item" data-view="stats">Stats</button>
+      <button class="nav-item" data-view="alerts">Alertes <span class="badge" id="alertBadge" style="display:none;">0</span></button>
+    </nav>
+
+    <div class="rail-footer">
+      RAG + scoring sémantique<br/>
+      Configure l'URL de ton API ⚙
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- ---------- Vue Interroger ---------- -->
+    <section class="view active" id="view-ask">
+      <h1>Interroger ton historique</h1>
+      <p class="subtitle">Pose une question sur tes candidatures passées. La réponse s'appuie uniquement sur ce qui a été indexé — chaque réponse peut citer ses sources.</p>
+
+      <div class="terminal" id="terminal">
+        <div class="empty">Aucun échange pour l'instant. Essaie : « à combien d'offres remote ai-je postulé ? »</div>
+      </div>
+
+      <div class="ask-row">
+        <input type="text" id="askInput" placeholder="Pose ta question…" />
+        <button class="primary" id="askBtn">Poser la question</button>
+      </div>
+      <p class="hint">Sans clé OpenAI configurée côté serveur, les réponses citent directement les passages pertinents plutôt que de les reformuler.</p>
+    </section>
+
+    <!-- ---------- Vue Missions ---------- -->
+    <section class="view" id="view-missions">
+      <h1>Missions repérées</h1>
+      <p class="subtitle">Les offres collectées et scorées selon ta compatibilité. Génère un brouillon à relire avant d'envoyer — rien ne part automatiquement.</p>
+
+      <div class="missions-toolbar">
+        <button class="primary" id="refreshMissionsBtn" style="font-size:12px; padding:8px 14px;">⌕ Rechercher de nouvelles missions</button>
+        <span class="hint" id="missionsStatus" style="margin:0;"></span>
+      </div>
+
+      <div class="mission-list" id="missionList">
+        <div class="skeleton"><div class="bar w100 tall"></div><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+      </div>
+
+      <div class="draft-panel" id="draftPanel"></div>
+    </section>
+
+    <!-- ---------- Vue Scorer ---------- -->
+    <section class="view" id="view-score">
+      <h1>Scorer une offre</h1>
+      <p class="subtitle">Colle le titre et le texte d'une offre pour évaluer sa compatibilité avec ton profil.</p>
+
+      <label class="field-label" for="scoreTitle">Titre du poste</label>
+      <input type="text" class="full" id="scoreTitle" placeholder="ex : Développeur Fullstack Senior" />
+
+      <label class="field-label" for="scoreDesc">Description de l'offre</label>
+      <textarea id="scoreDesc" placeholder="Colle le texte complet de l'annonce ici…"></textarea>
+
+      <div class="ask-row">
+        <button class="primary" id="scoreBtn">Évaluer l'offre</button>
+      </div>
+
+      <div class="score-result" id="scoreResult">
+        <div class="score-head">
+          <div class="score-number" id="scoreNumber">—</div>
+          <div>
+            <div class="score-reco" id="scoreReco"></div>
+            <div class="score-expl" id="scoreExpl"></div>
+          </div>
+        </div>
+
+        <div class="score-section">
+          <div class="score-section-title">Compétences matchées</div>
+          <div class="tag-row" id="matchedTags"></div>
+        </div>
+
+        <div class="score-section">
+          <div class="score-section-title">Compétences manquantes</div>
+          <div class="tag-row" id="missingTags"></div>
+        </div>
+
+        <div class="score-section">
+          <div class="score-section-title">Points de vigilance</div>
+          <ul class="flag-list" id="flagList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- Vue Journal ---------- -->
+    <section class="view" id="view-log">
+      <h1>Journal des candidatures</h1>
+      <p class="subtitle">Historique indexé pour la recherche. Ajoute, modifie ou supprime — l'index RAG suit automatiquement.</p>
+
+      <div class="add-box" style="margin-bottom:16px;">
+        <button class="mini-btn" id="addToggle" style="font-size:12px; padding:7px 13px;">+ Ajouter une candidature</button>
+      </div>
+
+      <div class="add-form" id="appForm">
+        <div class="form-grid">
+          <label class="field-label" for="fId">ID (unique)</label>
+          <input type="text" class="full" id="fId" placeholder="ex: acme-frontend" />
+          <label class="field-label" for="fCompany">Entreprise</label>
+          <input type="text" class="full" id="fCompany" placeholder="ex: Acme" />
+          <label class="field-label" for="fTitle">Poste</label>
+          <input type="text" class="full" id="fTitle" placeholder="ex: Développeur React" />
+          <label class="field-label" for="fLocation">Localisation</label>
+          <input type="text" class="full" id="fLocation" placeholder="ex: Cotonou / Full remote" />
+          <label class="field-label" for="fRemote">Télétravail</label>
+          <input type="text" class="full" id="fRemote" placeholder="ex: 100% télétravail" />
+          <label class="field-label" for="fSeniority">Séniorité demandée</label>
+          <input type="text" class="full" id="fSeniority" placeholder="ex: Junior / Confirmé" />
+          <label class="field-label" for="fStatus">Statut</label>
+          <select class="full" id="fStatus">
+            <option value="new">nouvelle</option>
+            <option value="to_apply">à postuler</option>
+            <option value="applied">postulée</option>
+            <option value="pending">en attente</option>
+            <option value="rejected">refusée</option>
+            <option value="dropped">abandonnée</option>
+          </select>
+          <label class="field-label" for="fDate">Date (YYYY-MM-DD)</label>
+          <input type="text" class="full" id="fDate" placeholder="2026-09-21" />
+          <label class="field-label" for="fStack">Stack (virgule-séparée)</label>
+          <input type="text" class="full" id="fStack" placeholder="React, TypeScript" />
+          <label class="field-label" for="fNotes">Notes</label>
+          <textarea id="fNotes" placeholder="Détails, leçons, contacts…" style="min-height:70px;"></textarea>
+        </div>
+        <div class="form-actions">
+          <button class="primary" id="saveAppBtn">Enregistrer</button>
+          <button class="mini-btn" id="cancelAppBtn" style="font-size:12px; padding:7px 13px;">Annuler</button>
+        </div>
+      </div>
+
+      <div class="ledger" id="ledger">
+        <div class="skeleton"><div class="bar w100 tall"></div><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+      </div>
+    </section>
+
+    <!-- ---------- Vue Stats ---------- -->
+    <section class="view" id="view-stats">
+      <h1>Statistiques</h1>
+      <p class="subtitle">Réponses chiffrées sur ton historique : combien de candidatures, quelle part de remote chaque mois, quels statuts.</p>
+      <div class="stat-grid" id="statSummary"></div>
+
+      <div class="score-section">
+        <div class="score-section-title">Répartition mensuelle</div>
+        <div class="month-table" id="statMonths"></div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-section-title">Statuts (tout l'historique)</div>
+        <div class="tag-row" id="statStatus"></div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-section-title">Télétravail (tout l'historique)</div>
+        <div class="tag-row" id="statRemote"></div>
+      </div>
+    </section>
+
+    <!-- ---------- Vue Alertes ---------- -->
+    <section class="view" id="view-alerts">
+      <h1>Alertes veille (<span id="alertCount">0</span> nouvelles)</h1>
+      <p class="subtitle">Les nouvelles offres dont le score de compatibilité dépasse le seuil (45 par défaut, réglable via ALERT_THRESHOLD). Postule directement, marque comme lue ou ignore.</p>
+      <div class="alerts-toolbar">
+        <button class="primary" id="refreshFeedsBtn" style="font-size:12px; padding:8px 14px;">↻ Rafraîchir les flux</button>
+        <span class="hint" id="veilleStatus" style="margin:0;"></span>
+      </div>
+      <div class="alert-list" id="alertList">
+        <div class="skeleton"><div class="bar w100 tall"></div><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ---------- Configuration de l'API ----------
+  function getApiBase() {
+    return localStorage.getItem("veille_api_base") || "http://localhost:8000";
+  }
+  function getApiKey() {
+    return localStorage.getItem("veille_api_key") || "";
+  }
+  function authHeaders(extra = {}) {
+    const key = getApiKey();
+    return key ? { ...extra, "X-API-Key": key } : extra;
+  }
+
+  let toastTimer;
+  function showToast(msg, tone) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.className = "show" + (tone ? " " + tone : "");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = ""; }, 2800);
+  }
+
+  const SKELETON = `<div class="skeleton"><div class="bar w100 tall"></div><div class="bar w80"></div><div class="bar w60"></div><div class="bar w40"></div></div>`;
+
+  function emptyState(title, text, err) {
+    return `
+      <div class="empty-state ${err ? "err" : ""}">
+        ${err ? "" : `<div class="empty-radar"><div class="radar-sweep"></div></div>`}
+        <h2>${title}</h2>
+        <p>${text}</p>
+      </div>
+    `;
+  }
+
+  const configToggle = document.getElementById("configToggle");
+  const configPanel = document.getElementById("configPanel");
+  const apiUrlInput = document.getElementById("apiUrlInput");
+  const apiKeyInput = document.getElementById("apiKeyInput");
+  const apiSaveBtn = document.getElementById("apiSaveBtn");
+
+  apiUrlInput.value = getApiBase();
+  apiKeyInput.value = getApiKey();
+
+  configToggle.addEventListener("click", () => {
+    configPanel.style.display = configPanel.style.display === "none" ? "flex" : "none";
+  });
+
+  apiSaveBtn.addEventListener("click", () => {
+    localStorage.setItem("veille_api_base", apiUrlInput.value.trim() || "http://localhost:8000");
+    localStorage.setItem("veille_api_key", apiKeyInput.value.trim());
+    configPanel.style.display = "none";
+    checkStatus();
+    showToast("Configuration de l'API enregistrée.");
+  });
+
+  // ---------- Navigation ----------
+  document.querySelectorAll(".nav-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll(".nav-item").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+      btn.classList.add("active");
+      document.getElementById("view-" + btn.dataset.view).classList.add("active");
+      if (btn.dataset.view === "log") loadLedger();
+      if (btn.dataset.view === "stats") loadStats();
+      if (btn.dataset.view === "alerts") loadAlerts();
+      if (btn.dataset.view === "missions") loadMissions();
+    });
+  });
+
+  // ---------- Statut de connexion ----------
+  async function checkStatus() {
+    const dot = document.getElementById("statusDot");
+    const text = document.getElementById("statusText");
+    const count = document.getElementById("statusCount");
+    try {
+      const res = await fetch(getApiBase() + "/health");
+      if (!res.ok) throw new Error();
+      dot.className = "status-dot on";
+      text.textContent = "API connectée";
+      const apps = await fetch(getApiBase() + "/applications").then(r => r.json());
+      count.textContent = apps.length + " candidatures indexées";
+      try {
+        const alerts = await fetch(getApiBase() + "/alerts", { headers: authHeaders() }).then(r => r.json());
+        if (Array.isArray(alerts)) setAlertBadge(alerts.filter(a => a.status === "new").length);
+      } catch (e) { /* badge non critique */ }
+    } catch (e) {
+      dot.className = "status-dot off";
+      text.textContent = "API non connectée";
+      count.textContent = "vérifie l'URL configurée ⚙";
+    }
+  }
+  checkStatus();
+
+  // ---------- Interroger ----------
+  const terminal = document.getElementById("terminal");
+  const askInput = document.getElementById("askInput");
+  const askBtn = document.getElementById("askBtn");
+
+  async function ask() {
+    const question = askInput.value.trim();
+    if (!question) return;
+
+    if (terminal.querySelector(".empty")) terminal.innerHTML = "";
+
+    const qLine = document.createElement("div");
+    qLine.className = "msg-q";
+    qLine.textContent = "> " + question;
+    terminal.appendChild(qLine);
+
+    askInput.value = "";
+    askBtn.disabled = true;
+
+    const aLine = document.createElement("div");
+    aLine.className = "msg-a";
+    aLine.textContent = "…";
+    terminal.appendChild(aLine);
+    terminal.scrollTop = terminal.scrollHeight;
+
+    try {
+      const res = await fetch(getApiBase() + "/ask", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ question }),
+      });
+      if (res.status === 401) { aLine.textContent = "Clé API invalide — vérifie la configuration ⚙."; return; }
+      const data = await res.json();
+      aLine.textContent = data.answer;
+
+      if (data.sources && data.sources.length) {
+        const srcLine = document.createElement("div");
+        srcLine.className = "msg-sources";
+        srcLine.textContent = "sources : " + data.sources.join(", ");
+        terminal.appendChild(srcLine);
+      }
+    } catch (e) {
+      aLine.textContent = "Impossible de contacter l'API. Vérifie l'URL configurée ⚙.";
+    } finally {
+      askBtn.disabled = false;
+      terminal.scrollTop = terminal.scrollHeight;
+    }
+  }
+
+  askBtn.addEventListener("click", ask);
+  askInput.addEventListener("keydown", e => { if (e.key === "Enter") ask(); });
+
+  // ---------- Scorer ----------
+  const scoreBtn = document.getElementById("scoreBtn");
+
+  scoreBtn.addEventListener("click", async () => {
+    const title = document.getElementById("scoreTitle").value.trim();
+    const description = document.getElementById("scoreDesc").value.trim();
+    if (!description) return;
+
+    scoreBtn.disabled = true;
+    scoreBtn.textContent = "Analyse…";
+
+    try {
+      const res = await fetch(getApiBase() + "/score-job", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ title, description }),
+      });
+      if (res.status === 401) { alert("Clé API invalide — vérifie la configuration ⚙."); return; }
+      const data = await res.json();
+
+      const scoreNumber = document.getElementById("scoreNumber");
+      scoreNumber.textContent = data.score;
+      scoreNumber.className = "score-number " + (data.score >= 70 ? "good" : data.score >= 45 ? "mid" : "low");
+
+      document.getElementById("scoreReco").textContent = data.recommendation;
+      document.getElementById("scoreExpl").textContent = data.explanation;
+
+      const matchedTags = document.getElementById("matchedTags");
+      matchedTags.innerHTML = data.matched_skills.length
+        ? data.matched_skills.map(s => `<span class="tag matched">${s}</span>`).join("")
+        : `<span class="hint">Aucune</span>`;
+
+      const missingTags = document.getElementById("missingTags");
+      missingTags.innerHTML = data.missing_skills.length
+        ? data.missing_skills.map(s => `<span class="tag missing">${s}</span>`).join("")
+        : `<span class="hint">Aucune</span>`;
+
+      const flagList = document.getElementById("flagList");
+      flagList.innerHTML = data.flags.length
+        ? data.flags.map(f => `<li>${f}</li>`).join("")
+        : `<li>Aucun point de vigilance particulier.</li>`;
+
+      document.getElementById("scoreResult").classList.add("show");
+    } catch (e) {
+      alert("Impossible de contacter l'API. Vérifie qu'elle tourne sur localhost:8000.");
+    } finally {
+      scoreBtn.disabled = false;
+      scoreBtn.textContent = "Évaluer l'offre";
+    }
+  });
+
+  // ---------- Journal ----------
+  const STATUS_LABELS = {
+    new: "nouvelle", seen: "vue", to_apply: "à postuler", applied: "postulée",
+    pending: "en attente", rejected: "refusée", dropped: "abandonnée",
+  };
+  const STATUS_CLS = {
+    new: "pending", seen: "pending", to_apply: "pending", applied: "sent",
+    pending: "pending", rejected: "rejected", dropped: "dropped",
+  };
+  const statusKey = (status) => {
+    const s = (status || "").toLowerCase().trim();
+    if (STATUS_LABELS[s]) return s;
+    const alias = {
+      "candidature envoyée": "applied", "candidature envoyee": "applied",
+      "envoyée": "applied", "envoyee": "applied", "envoyé": "applied",
+      "envoye": "applied", "postulé": "applied", "postule": "applied",
+      "non postulé": "to_apply", "non postule": "to_apply",
+      "à postuler": "to_apply", "a postuler": "to_apply",
+      "décision en attente": "pending", "decision en attente": "pending",
+      "en attente": "pending", "attente": "pending",
+      "refusé": "rejected", "refuse": "rejected", "refusée": "rejected",
+      "refusee": "rejected",
+      "abandonné": "dropped", "abandonne": "dropped", "abandonnée": "dropped",
+      "abandonnee": "dropped", "dismissed": "dropped", "ignorée": "dropped",
+      "lien suspect": "dropped",
+      "nouveau": "new", "nouvel": "new", "vue": "seen", "vu": "seen",
+    }[s];
+    return alias || s;
+  };
+  const statusLabel = (status) => {
+    const key = statusKey(status);
+    return {
+      cls: STATUS_CLS[key] || "pending",
+      label: STATUS_LABELS[key] || status || "en attente",
+    };
+  };
+
+  let ledgerApps = [];
+  const ledger = document.getElementById("ledger");
+  const appForm = document.getElementById("appForm");
+  const fId = document.getElementById("fId");
+
+  function showForm(app) {
+    window._editingId = app ? app.id : null;
+    fId.value = app ? app.id : "";
+    document.getElementById("fCompany").value = app ? app.company : "";
+    document.getElementById("fTitle").value = app ? app.title : "";
+    document.getElementById("fLocation").value = app ? app.location || "" : "";
+    document.getElementById("fRemote").value = app ? app.remote || "" : "";
+    document.getElementById("fSeniority").value = app ? app.seniority_required || "" : "";
+    document.getElementById("fStatus").value = statusKey(app ? app.status : "") || "new";
+    document.getElementById("fDate").value = app ? app.date || "" : "";
+    document.getElementById("fStack").value = app ? (app.stack || []).join(", ") : "";
+    document.getElementById("fNotes").value = app ? app.notes || "" : "";
+    fId.disabled = !!app;
+    appForm.classList.add("show");
+    (app ? document.getElementById("fCompany") : fId).focus();
+  }
+
+  function hideForm() {
+    appForm.classList.remove("show");
+    window._editingId = null;
+  }
+
+  document.getElementById("addToggle").addEventListener("click", () => showForm(null));
+  document.getElementById("cancelAppBtn").addEventListener("click", hideForm);
+
+  document.getElementById("saveAppBtn").addEventListener("click", async () => {
+    const payload = {
+      id: fId.value.trim(),
+      company: document.getElementById("fCompany").value.trim(),
+      title: document.getElementById("fTitle").value.trim(),
+      location: document.getElementById("fLocation").value.trim(),
+      remote: document.getElementById("fRemote").value.trim(),
+      seniority_required: document.getElementById("fSeniority").value.trim(),
+      status: document.getElementById("fStatus").value.trim(),
+      date: document.getElementById("fDate").value.trim(),
+      stack: document.getElementById("fStack").value.split(",").map(s => s.trim()).filter(Boolean),
+      notes: document.getElementById("fNotes").value.trim(),
+    };
+    if (!payload.id || !payload.company || !payload.title) {
+      alert("ID, entreprise et poste sont requis.");
+      return;
+    }
+    const isEdit = window._editingId !== null;
+    const saveBtn = document.getElementById("saveAppBtn");
+    saveBtn.disabled = true;
+    try {
+      const res = await fetch(getApiBase() + (isEdit ? `/applications/${encodeURIComponent(payload.id)}` : "/applications"), {
+        method: isEdit ? "PUT" : "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || "Erreur lors de l'enregistrement.");
+        return;
+      }
+      hideForm();
+      await loadLedger();
+      checkStatus();
+      showToast(isEdit ? "Candidature mise à jour." : "Candidature ajoutée au journal.", "ok");
+    } catch (e) {
+      alert("Impossible de contacter l'API. Vérifie l'URL configurée ⚙.");
+    } finally {
+      saveBtn.disabled = false;
+    }
+  });
+
+  async function deleteApp(id) {
+    if (!confirm("Supprimer cette candidature ?")) return;
+    try {
+      const res = await fetch(getApiBase() + `/applications/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok && res.status !== 404) {
+        alert("Erreur lors de la suppression.");
+        return;
+      }
+      await loadLedger();
+      checkStatus();
+      showToast("Candidature supprimée.");
+    } catch (e) {
+      alert("Impossible de contacter l'API. Vérifie l'URL configurée ⚙.");
+    }
+  }
+
+  ledger.addEventListener("click", (e) => {
+    const del = e.target.closest("[data-del]");
+    if (del) { deleteApp(del.dataset.del); return; }
+    const edit = e.target.closest("[data-edit]");
+    if (edit) {
+      const app = ledgerApps.find(a => a.id === edit.dataset.edit);
+      if (app) showForm(app);
+    }
+  });
+
+  async function loadLedger() {
+    ledger.innerHTML = SKELETON;
+    try {
+      ledgerApps = await fetch(getApiBase() + "/applications").then(r => r.json());
+      if (!ledgerApps.length) {
+        ledger.innerHTML = emptyState("Journal vierge", "Aucune candidature indexée pour l'instant. Ajoute ta première candidature avec « + Ajouter une candidature ».");
+        return;
+      }
+      ledger.innerHTML = ledgerApps.map(app => {
+        const st = statusLabel(app.status);
+        const stack = (app.stack || []).join(" · ");
+        return `
+          <div class="ledger-row">
+            <div>
+              <div class="ledger-company">${app.company}</div>
+              <div class="ledger-meta">${app.location || ""}${app.remote ? " · " + app.remote : ""}${app.date ? " · " + app.date : ""}</div>
+            </div>
+            <div>
+              <div class="ledger-title">${app.title}</div>
+              <div class="ledger-meta">${stack}${app.seniority_required ? " · " + app.seniority_required : ""}</div>
+              ${app.notes ? `<div class="ledger-meta">${app.notes}</div>` : ""}
+            </div>
+            <div class="ledger-actions">
+              <span class="status-tag ${st.cls}">${st.label}</span>
+              <div style="display:flex; gap:6px;">
+                <button class="mini-btn" data-edit="${app.id}">éditer</button>
+                <button class="mini-btn danger" data-del="${app.id}">supprimer</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } catch (e) {
+      ledger.innerHTML = emptyState("Impossible de charger le journal", "Vérifie l'URL configurée ⚙ et que l'API répond.", true);
+    }
+  }
+
+  // ---------- Stats ----------
+  async function loadStats() {
+    const summary = document.getElementById("statSummary");
+    const months = document.getElementById("statMonths");
+    const statusEl = document.getElementById("statStatus");
+    const remoteEl = document.getElementById("statRemote");
+    summary.innerHTML = `<div class="skeleton"><div class="bar w100 tall"></div><div class="bar w40"></div></div>`;
+    try {
+      const s = await fetch(getApiBase() + "/stats").then(r => r.json());
+      const remoteCards = Object.entries(s.by_remote)
+        .map(([k, v]) => `<div class="stat-card"><div class="num">${v}</div><div class="lbl">${k}</div></div>`)
+        .join("");
+      summary.innerHTML = `
+        <div class="stat-card"><div class="num">${s.total}</div><div class="lbl">candidatures au total</div></div>
+        ${remoteCards}
+      `;
+      months.innerHTML = `
+        <div class="month-row head"><span>mois</span><span>total</span><span>remote</span><span>hybride</span><span>sur site</span></div>
+        ${Object.entries(s.by_month).map(([m, b]) => `
+          <div class="month-row">
+            <span><b>${m}</b></span><span>${b.total}</span><span>${b.remote}</span><span>${b.hybrid}</span><span>${b.onsite}</span>
+          </div>`).join("")}
+      `;
+      statusEl.innerHTML = Object.entries(s.by_status)
+        .map(([k, v]) => `<span class="tag">${statusLabel(k).label} · ${v}</span>`).join("");
+      remoteEl.innerHTML = Object.entries(s.by_remote)
+        .map(([k, v]) => `<span class="tag">${k} · ${v}</span>`).join("");
+    } catch (e) {
+      summary.innerHTML = emptyState("Statistiques indisponibles", "Impossible de charger les chiffres. Vérifie l'URL configurée ⚙.", true);
+    }
+  }
+
+  // ---------- Alertes ----------
+  function setAlertBadge(count) {
+    const el = document.getElementById("alertBadge");
+    el.textContent = count || 0;
+    el.style.display = count > 0 ? "inline-block" : "none";
+  }
+
+  async function loadAlerts() {
+    const list = document.getElementById("alertList");
+    const countEl = document.getElementById("alertCount");
+    list.innerHTML = SKELETON;
+    try {
+      const alerts = await fetch(getApiBase() + "/alerts", { headers: authHeaders() }).then(r => r.json());
+      const newCount = alerts.filter(a => a.status === "new").length;
+      setAlertBadge(newCount);
+      countEl.textContent = newCount;
+      if (!alerts.length) {
+        list.innerHTML = emptyState("Calme sur le radar", "Aucune alerte en attente. Lance « Rafraîchir les flux » pour scorer les offres collectées.");
+        return;
+      }
+      list.innerHTML = alerts.map(a => {
+        const scoreCls = a.score >= 70 ? "good" : a.score >= 45 ? "mid" : "low";
+        const tags = (a.matched_skills || []).map(s => `<span class="tag matched">${s}</span>`).join("");
+        const miss = (a.missing_skills || []).map(s => `<span class="tag missing">${s}</span>`).join("");
+        const flags = (a.flags || []).map(f => `<li>${f}</li>`).join("");
+        return `
+          <div class="alert-card ${a.status}">
+            <div class="alert-head">
+              <div>
+                <div class="alert-title">${a.title}${a.url ? ` <a href="${a.url}" target="_blank" rel="noopener">↗</a>` : ""}</div>
+                <div class="alert-company">${a.company || ""}${a.category ? " · " + a.category : ""}${a.status === "new" ? " · nouvelle" : ""}</div>
+              </div>
+              <div class="alert-score ${scoreCls}">${a.score}</div>
+            </div>
+            <div class="alert-reco">${a.recommendation}</div>
+            <div class="alert-meta">${a.published ? "publié le " + a.published : ""}${a.source ? " · " + a.source.replace(/^https?:\/\//, "") : ""}${a.created ? " · repérée le " + a.created : ""}</div>
+            ${tags ? `<div class="tag-row" style="margin-top:10px;">${tags}</div>` : ""}
+            ${miss ? `<div class="tag-row" style="margin-top:6px;">${miss}</div>` : ""}
+            ${flags ? `<ul class="flag-list" style="margin-top:8px;">${flags}</ul>` : ""}
+            <div class="alert-foot">
+              ${a.status === "new" ? `<button class="mini-btn" data-ack="${a.id}">marquer lue</button>` : ""}
+              ${a.status !== "applied" ? `<button class="mini-btn" data-apply="${a.id}">postuler</button>` : ""}
+              ${a.status !== "dropped" && a.status !== "applied" ? `<button class="mini-btn danger" data-dismiss="${a.id}">ignorer</button>` : ""}
+              <span class="alert-status ${a.status}">${STATUS_LABELS[a.status] || a.status}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    } catch (e) {
+      list.innerHTML = emptyState("Alertes indisponibles", "Impossible de contacter l'API. Vérifie l'URL configurée ⚙.", true);
+    }
+  }
+
+  document.getElementById("refreshFeedsBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("refreshFeedsBtn");
+    const statusEl = document.getElementById("veilleStatus");
+    btn.disabled = true;
+    btn.textContent = "Analyse des flux…";
+    statusEl.textContent = "";
+    try {
+      const res = await fetch(getApiBase() + "/feeds/refresh", { method: "POST", headers: authHeaders() });
+      if (res.status === 401) { statusEl.textContent = "Clé API invalide — vérifie la configuration ⚙."; return; }
+      const data = await res.json();
+      const st = [];
+      if (data.new_offers) st.push(`${data.new_offers} nouvelles offres`);
+      if (data.alerts_added) st.push(`${data.alerts_added} alertes générées`);
+      if (data.errors && data.errors.length) st.push(`${data.errors.length} erreur(s) de flux`);
+      statusEl.textContent = st.length ? st.join(" · ") : "Aucune nouveauté.";
+      await loadAlerts();
+      checkStatus();
+    } catch (e) {
+      statusEl.textContent = "Erreur lors du rafraîchissement.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "↻ Rafraîchir les flux";
+    }
+  });
+
+  document.getElementById("alertList").addEventListener("click", async (e) => {
+    const target = e.target.closest("[data-ack],[data-apply],[data-dismiss]");
+    if (!target) return;
+    const id = target.dataset.ack || target.dataset.apply || target.dataset.dismiss;
+    const action = target.dataset.ack ? "ack" : target.dataset.apply ? "apply" : "dismiss";
+    try {
+      const res = await fetch(`${getApiBase()}/alerts/${encodeURIComponent(id)}/${action}`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert(err.detail || "Action impossible.");
+        return;
+      }
+      await loadAlerts();
+      checkStatus();
+      if (action === "apply") {
+        alert("Candidature ajoutée au journal.");
+        showToast("Mission archivée au journal.", "ok");
+      }
+    } catch (err) {
+      alert("Impossible de contacter l'API.");
+    }
+  });
+
+  // ---------- Missions ----------
+  const missionStatus = (s) => STATUS_LABELS[s] || s;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
+  let missionOps = [];
+  const missionList = document.getElementById("missionList");
+  const draftPanel = document.getElementById("draftPanel");
+
+  function renderOpportunity(o) {
+    const scoreCls = o.score >= 70 ? "good" : o.score >= 45 ? "mid" : "low";
+    const applied = o.status === "applied";
+    const matched = (o.matched_skills || []).map(s => `<span class="tag matched">${s}</span>`).join("");
+    const missing = (o.missing_skills || []).map(s => `<span class="tag missing">${s}</span>`).join("");
+    const flags = (o.flags || []).length
+      ? `<ul class="flag-list" style="margin-top:8px;">${o.flags.map(f => `<li>${f}</li>`).join("")}</ul>`
+      : "";
+    const meta = [
+      o.job_type,
+      o.location,
+      o.published_at ? "publié le " + o.published_at : "",
+      o.age_days != null ? "repérée il y a " + o.age_days + " j" : (o.discovered_at ? "repérée le " + o.discovered_at : ""),
+    ].filter(Boolean).join(" · ");
+    return `
+      <div class="mission-row ${applied ? "is-applied" : ""}">
+        <div class="mission-score ${scoreCls}">${o.score}</div>
+        <div>
+          <div class="mission-title">${o.title}</div>
+          <div class="mission-company">${o.company || ""}</div>
+          ${meta ? `<div class="mission-meta">${meta}</div>` : ""}
+          ${matched ? `<div class="tag-row" style="margin-top:10px;">${matched}</div>` : ""}
+          ${missing ? `<div class="tag-row" style="margin-top:6px;">${missing}</div>` : ""}
+          ${flags}
+        </div>
+        <div class="mission-actions">
+          <span class="mission-status ${o.status}">${missionStatus(o.status)}</span>
+          ${o.url ? `<button class="mini-btn" data-open="${o.id}">voir l'offre ↗</button>` : ""}
+          ${!applied ? `<button class="mini-btn" data-draft="${o.id}">générer un brouillon</button>` : ""}
+          ${!applied ? `<button class="mini-btn" data-postulate="${o.id}">marquer comme postulé</button>` : ""}
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadMissions() {
+    missionList.innerHTML = SKELETON;
+    try {
+      const res = await fetch(getApiBase() + "/opportunities", { headers: authHeaders() });
+      if (res.status === 401) {
+        missionList.innerHTML = emptyState("Clé API invalide", "Vérifie la configuration ⚙ avant de rechercher des missions.", true);
+        return;
+      }
+      const ops = await res.json();
+      missionOps = ops;
+      if (!ops.length) {
+        missionList.innerHTML = emptyState("Le radar ne capte rien", "Aucune mission repérée pour l'instant. Lance « Rechercher de nouvelles missions » : les meilleures offres scorées ouvriront ici.");
+        return;
+      }
+      missionList.innerHTML = ops.map(renderOpportunity).join("");
+    } catch (e) {
+      missionList.innerHTML = emptyState("Missions indisponibles", "Impossible de contacter l'API. Vérifie l'URL configurée ⚙.", true);
+    }
+  }
+
+  missionList.addEventListener("click", async (e) => {
+    const target = e.target.closest("[data-open],[data-draft],[data-postulate]");
+    if (!target) return;
+    const id = target.dataset.open || target.dataset.draft || target.dataset.postulate;
+    const op = missionOps.find(o => o.id === id);
+
+    if (target.dataset.open) {
+      if (op && op.url) window.open(op.url, "_blank", "noopener");
+      return;
+    }
+
+    if (target.dataset.draft) {
+      try {
+        target.disabled = true;
+        target.textContent = "génération…";
+        const res = await fetch(`${getApiBase()}/opportunities/${encodeURIComponent(id)}/draft`, {
+          method: "POST",
+          headers: authHeaders(),
+        });
+        if (res.status === 401) { alert("Clé API invalide — vérifie la configuration ⚙."); return; }
+        if (!res.ok) { alert("Impossible de générer le brouillon."); return; }
+        const d = await res.json();
+        draftPanel.innerHTML = `
+          <div class="draft-head">
+            <div class="draft-subject">${escapeHtml(d.subject)}</div>
+            <button class="mini-btn" id="copyDraftBtn" style="padding:7px 14px; font-size:12px;">Copier</button>
+          </div>
+          <div class="draft-body">${escapeHtml(d.body)}</div>
+          <p class="hint" style="margin:10px 0 0;">À relire et envoyer toi-même — rien ne part automatiquement.</p>
+        `;
+        draftPanel.classList.add("show");
+        document.getElementById("copyDraftBtn").addEventListener("click", async () => {
+          const text = d.subject + "\n\n" + d.body;
+          try {
+            await navigator.clipboard.writeText(text);
+          } catch (err) {
+            const ta = document.createElement("textarea");
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+          }
+          const btn = document.getElementById("copyDraftBtn");
+          const old = btn.textContent;
+          btn.textContent = "Copié ✓";
+          showToast("Brouillon copié — relis et envoie toi-même.", "ok");
+          setTimeout(() => { btn.textContent = old; }, 1500);
+        });
+        draftPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } catch (err) {
+        alert("Impossible de contacter l'API.");
+      } finally {
+        target.disabled = false;
+        target.textContent = "générer un brouillon";
+      }
+      return;
+    }
+
+    if (target.dataset.postulate) {
+      if (!confirm(`Marquer « ${op ? op.title : id} » comme postulé ? L'entrée sera archivée dans le journal.`)) return;
+      try {
+        const res = await fetch(`${getApiBase()}/opportunities/${encodeURIComponent(id)}/status`, {
+          method: "POST",
+          headers: authHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ status: "applied" }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.detail || "Action impossible.");
+          return;
+        }
+        draftPanel.classList.remove("show");
+        await loadMissions();
+        checkStatus();
+        showToast("Mission archivée au journal comme « postulée ».", "ok");
+      } catch (err) {
+        alert("Impossible de contacter l'API.");
+      }
+    }
+  });
+
+  document.getElementById("refreshMissionsBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("refreshMissionsBtn");
+    const statusEl = document.getElementById("missionsStatus");
+    btn.disabled = true;
+    btn.textContent = "Analyse en cours…";
+    statusEl.textContent = "";
+    try {
+      const res = await fetch(getApiBase() + "/opportunities/refresh", {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      if (res.status === 401) { statusEl.textContent = "Clé API invalide — vérifie la configuration ⚙."; return; }
+      const d = await res.json();
+      const bits = [];
+      if (d.fetched) bits.push(`${d.fetched} offres analysées sur les flux`);
+      if (d.above_threshold) bits.push(`${d.above_threshold} nouvelles retenues`);
+      if (d.added) bits.push(`${d.added} nouvelles stockées`);
+      if (d.filtered) bits.push(`${d.filtered} inéligibles sorties`);
+      if (d.expired) bits.push(`${d.expired} périmées archivées`);
+      await loadMissions();
+      checkStatus();
+      statusEl.textContent = bits.join(" · ") +
+        ` — Sur ce radar : ${missionOps.length} mission(s) affichée(s) sur score ≥ 45.`;
+    } catch (e) {
+      statusEl.textContent = "Erreur lors de la recherche.";
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "⌕ Rechercher de nouvelles missions";
+    }
+  });
+</script>
+
+</body>
+</html>
